@@ -2,6 +2,7 @@ import express, { Request, Response, Router } from 'express';
 import dotenv from 'dotenv'
 import { AuthController } from '../controller/auth-controller';
 import { AuthService } from '../service/auth-service';
+import { authMiddleware } from '../middleware/auth-middleware';
 
 dotenv.config();
 
@@ -11,3 +12,5 @@ authRoutes.get('/google', (req: Request, res: Response) => res.redirect(AuthServ
 authRoutes.get('/google/callback', AuthController.oauth2Login)
 authRoutes.post('/signup', AuthController.register);
 authRoutes.post('/signin', AuthController.login);
+authRoutes.post('/signout', authMiddleware, AuthController.logout);
+authRoutes.post('/refresh-token', authMiddleware, AuthController.refresh);

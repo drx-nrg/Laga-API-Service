@@ -25,5 +25,5 @@ const convertToDateTime = (date) =>
         return date * rules[datePostfix];
       };
 
-
-console.log(dateConverter('7d'));
+const expirationDate = new Date(Date.now() + (1000 * 60 * 60 * 24 * 7)).toDateString();
+console.log(expirationDate);

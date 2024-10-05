@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { CreateUserRequest, UserRequest } from "../model/user-model";
 import { AuthService } from "../service/auth-service";
+import { RequestWithUser } from "../type/RequestWithUser";
 
 export class AuthController {
     static async register(req: Request, res: Response, next: NextFunction){
@@ -32,7 +33,7 @@ export class AuthController {
                 status: "success",
                 message: "Authentication success with google credential",
                 data: data
-            })
+            });
         } catch (error) {
             next(error);
         }
@@ -41,20 +42,50 @@ export class AuthController {
     static async login(req: Request, res: Response, next: NextFunction){
         try {
             const request: UserRequest = req.body as UserRequest;
-            const response = await AuthService.login(request);
+            const { dataToSend: data, refreshToken, refreshTokenExpiration } = await AuthService.login(request);
+            
+            res.cookie("laga_refresh_token", refreshToken, {
+                maxAge: refreshTokenExpiration,
+                httpOnly: true,
+                secure: false,
+            });
+
             res.status(200).json({
                 status: "success",
                 message: "User successfully login",
-                data: response
-            })
+                data: data
+            });
         } catch (error) {
             next(error);
         }
     }
 
-    static async logout(req: Request, res: Response, next: NextFunction){
+    static async logout(req: RequestWithUser, res: Response, next: NextFunction){
         try {
-            // Logout logic here
+            await AuthService.logout(Number(req.user?.user_id || "0"));
+            res.cookie("laga_refresh_token", "", {
+                maxAge: 0,
+                httpOnly: true,
+                secure: false,
+            });
+            res.status(200).json({
+                status: "success",
+                message: "User successfully logged out",
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async refresh(req: Request, res: Response, next: NextFunction){
+        try {
+            const refreshToken: string = req.cookies["laga_refresh_token"] || "";
+            const response = await AuthService.refreshToken(refreshToken);
+            res.status(200).json({
+                status: "success",
+                message: "Token successfully refresh",
+                accessToken: response
+            });
         } catch (error) {
             next(error);
         }

@@ -49,8 +49,8 @@ model Challenge {
   created_at            DateTime              @default(now()) @db.DateTime(0)
   updated_at            DateTime              @default(now()) @db.DateTime(0)
   challenge_submissions ChallengeSubmission[]
-  classrooms            Classroom             @relation(fields: [classroom_id], references: [classroom_id], onDelete: Restrict, onUpdate: Restrict, map: "challenges_ibfk_1")
-  users                 User                  @relation(fields: [author_id], references: [user_id], onDelete: Restrict, onUpdate: Restrict, map: "challenges_ibfk_2")
+  classrooms            Classroom             @relation(fields: [classroom_id], references: [classroom_id], onUpdate: Restrict, map: "challenges_ibfk_1")
+  users                 User                  @relation(fields: [author_id], references: [user_id], onUpdate: Restrict, map: "challenges_ibfk_2")
 
   @@index([author_id], map: "author_id")
   @@index([classroom_id], map: "classroom_id")
@@ -72,16 +72,17 @@ model ClassroomTopic {
 model Classroom {
   classroom_id      Int              @id @default(autoincrement())
   title             String           @db.VarChar(200)
+  slug              String?          @unique(map: "slug") @db.VarChar(200)
   description       String           @db.Text
   creator_id        Int
-  classroom_picture String           @db.VarChar(200)
+  classroom_picture String?          @db.VarChar(200)
   max_students      Int
   created_at        DateTime         @default(now()) @db.DateTime(0)
   updated_at        DateTime         @default(now()) @db.DateTime(0)
   challenges        Challenge[]
-  classroom_topics  ClassroomTopic[]
-  users             User             @relation(fields: [creator_id], references: [user_id], onDelete: Restrict, onUpdate: Restrict, map: "classrooms_ibfk_1")
-  user_classrooms   UserClassroom[]
+  topics            ClassroomTopic[]
+  creator           User             @relation(fields: [creator_id], references: [user_id], onUpdate: Restrict, map: "classrooms_ibfk_1")
+  students          UserClassroom[]
 
   @@index([creator_id], map: "creator_id")
   @@map("classrooms")
@@ -157,11 +158,11 @@ model UserClassroom {
 
 model User {
   user_id                             Int                   @id @default(autoincrement())
-  username                            String                @unique(map: "username") @db.VarChar(50)
-  password                            String?               @db.VarChar(50)
-  email                               String                @unique(map: "email") @db.VarChar(50)
-  firstname                           String                @db.VarChar(50)
-  lastname                            String                @db.VarChar(50)
+  username                            String                @unique(map: "username") @db.VarChar(100)
+  password                            String?               @db.VarChar(255)
+  email                               String                @unique(map: "email") @db.VarChar(255)
+  firstname                           String                @db.VarChar(100)
+  lastname                            String                @db.VarChar(100)
   bio                                 String?               @db.Text
   profile_picture                     String?               @db.VarChar(255)
   total_xp                            Int                   @default(0)
@@ -184,7 +185,7 @@ model RefreshToken {
   user_id    Int
   token      String   @db.VarChar(200)
   expires_at DateTime @db.DateTime(0)
-  created_at       DateTime         @default(now()) @db.DateTime(0)
+  created_at DateTime @default(now()) @db.DateTime(0)
 
   @@map("refresh_tokens")
 }

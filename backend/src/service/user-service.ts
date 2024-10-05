@@ -12,7 +12,7 @@ export type PaginateConfig = {
     sortDir: string,
 }
 
-interface UserProp {
+export interface SchemaProp {
     [key: string]: any
 }
 
@@ -37,7 +37,7 @@ export class UserService {
 
         if(sortDir === "desc"){
             if(["total_score","total_xp"].includes(sortBy)){
-                sortedUsers = users.slice().sort((a: UserProp, b: UserProp) => b[sortBy] - a[sortBy]);
+                sortedUsers = users.slice().sort((a: SchemaProp, b: SchemaProp) => b[sortBy] - a[sortBy]);
             }
             else if(sortBy === "created_at"){
                 sortedUsers = users.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -47,7 +47,7 @@ export class UserService {
             }
         }else if(sortDir === "asc"){
             if(["total_score","total_xp"].includes(sortBy)){
-                sortedUsers = users.slice().sort((a: UserProp, b: UserProp) => a[sortBy] - b[sortBy]);
+                sortedUsers = users.slice().sort((a: SchemaProp, b: SchemaProp) => a[sortBy] - b[sortBy]);
             }
             else if(sortBy === "created_at"){
                 sortedUsers = users.slice().sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());

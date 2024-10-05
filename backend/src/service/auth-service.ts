@@ -9,6 +9,14 @@ import { generateToken } from "../lib/generateToken";
 import { User } from "@prisma/client";
 import { generateRefreshToken } from "../lib/generate-refresh-token";
 import { dateConverter } from "../lib/date-converter";
+import { verifyToken } from "../lib/verify-token";
+import { Response } from "express";
+
+interface SignInResponse<T> {
+    dataToSend: T,
+    refreshToken: string,
+    refreshTokenExpiration: number
+}
 
 export class AuthService {
     static readonly oauth2Client = new google.auth.OAuth2(
@@ -51,7 +59,7 @@ export class AuthService {
         return toAuthUserResponse(user);
     }
 
-    static async oauth2Login(code: string){
+    static async oauth2Login(code: string): Promise<SignInResponse<AuthUserResponse>>{
         const { tokens } = await this.oauth2Client.getToken(code as string);
         this.oauth2Client.setCredentials(tokens);
         
@@ -84,27 +92,24 @@ export class AuthService {
         }
 
         const { user_id: id, username, email } = user;
-        const { token: refreshToken } = generateRefreshToken(user);
+        const { token: refreshToken, expirationDate } = generateRefreshToken(user);
         const accessToken = generateToken({ id, username, email });
-
-        const refreshTokenExpiration = Date.now() + dateConverter(process.env.REFRESH_TOKEN_LIFETIME as string)
-        const refreshTokenExpirationDate: Date = new Date(refreshTokenExpiration);
 
         await prisma.refreshToken.create({
             data: {
                 user_id: user.user_id,
                 token: refreshToken,
-                expires_at: refreshTokenExpirationDate,
+                expires_at: expirationDate,
             }
         })
 
         const dataToSend: AuthUserResponse = toAuthUserResponse(user);
         dataToSend.token = accessToken;
 
-        return { dataToSend, refreshToken, refreshTokenExpiration };
+        return { dataToSend, refreshToken, refreshTokenExpiration: dateConverter(process.env.REFRESH_TOKEN_LIFETIME as string) };
     }
 
-    static async login(request: UserRequest): Promise<AuthUserResponse>{
+    static async login(request: UserRequest): Promise<SignInResponse<AuthUserResponse>>{
         const loginRequest = Validation.validate(UserValidation.LOGIN, request);
 
         const user = await prisma.user.findFirst({
@@ -122,18 +127,57 @@ export class AuthService {
             throw new ResponseError(401, "Username or password is wrong");
         }
 
-        const token: string = generateToken({
-            id: Number(user.user_id),
+        const { user_id: id, username, email } = user;
+        const { token: refreshToken, expirationDate } = generateRefreshToken(user);
+        const accessToken = generateToken({ id, username, email });
+
+        await prisma.refreshToken.create({
+            data: {
+                user_id: user.user_id,
+                token: refreshToken,
+                expires_at: expirationDate,
+            }
+        })
+
+        const dataToSend: AuthUserResponse = toAuthUserResponse(user);
+        dataToSend.token = accessToken;
+
+        return { dataToSend, refreshToken, refreshTokenExpiration: dateConverter(process.env.REFRESH_TOKEN_LIFETIME as string) };
+    }
+
+    static async logout(user_id: number): Promise<any>{
+        await prisma.refreshToken.deleteMany({
+            where: { user_id }
+        });
+    }
+
+    static async refreshToken(refreshToken: string): Promise<string>{
+        const { err, decoded } = await verifyToken(refreshToken);
+        if(err){
+            throw new ResponseError(401, "Invalid or expired refresh token, please log in", "unauthorized");
+        }
+
+        const { user_id, username } = decoded;
+        const user = await prisma.user.findUnique({
+            where: { username }
+        });
+        const validToken = await prisma.refreshToken.findFirst({
+            where: {
+                token: refreshToken,
+                user_id
+            }
+        });
+
+        if(!user || user.user_id !== user_id || !validToken){
+            throw new ResponseError(401, "Invalid or expired refresh token, please log in", "unauthorized");
+        }
+
+        const accessToken = generateToken({
+            id: user.user_id,
             username: user.username,
-            email: user.email
+            email: user.email,
         } as UserJWTPayload);
 
-        const result: AuthUserResponse = toAuthUserResponse(user);
-        result.token = token;
-        return result;
-    }
-
-    static async logout(): Promise<boolean>{
-        return true;
-    }
+        return accessToken;
+    }       
 }

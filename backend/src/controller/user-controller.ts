@@ -1,11 +1,11 @@
 import { NextFunction, Request, Response } from "express";
-import { CreateUserRequest, UpdateUserRequest, UserRequest } from "../model/user-model";
+import { UpdateUserRequest } from "../model/user-model";
 import { PaginateConfig, UserService } from "../service/user-service";
 import { User } from "@prisma/client";
-import { AuthService } from "../service/auth-service";
+import { RequestWithUser } from "../type/RequestWithUser";
 
 export class UserController {
-    static async index(req: Request, res: Response, next: NextFunction){
+    static async index(req: RequestWithUser, res: Response, next: NextFunction){
         try {
             const paginateConfig: PaginateConfig = {
                 page: Number(req.query.page) || 0,
@@ -24,7 +24,7 @@ export class UserController {
         }
     }
 
-    static async show(req: Request, res: Response, next: NextFunction){
+    static async show(req: RequestWithUser, res: Response, next: NextFunction){
         try {
             const username: string = req.params.username || "";
             const response: User = await UserService.getUserDetail(username)
@@ -38,7 +38,7 @@ export class UserController {
         }
     }
 
-    static async update(req: Request, res: Response, next: NextFunction){
+    static async update(req: RequestWithUser, res: Response, next: NextFunction){
         try {
             const request: UpdateUserRequest = req.body as UpdateUserRequest;
             const userID: number = Number(req.params.id) || 0;
@@ -53,7 +53,7 @@ export class UserController {
         }
     }
     
-    static async destroy(req: Request, res: Response, next: NextFunction){
+    static async destroy(req: RequestWithUser, res: Response, next: NextFunction){
         try {
             const userID = Number(req.params.id) || 0;
             await UserService.deleteUser(userID);

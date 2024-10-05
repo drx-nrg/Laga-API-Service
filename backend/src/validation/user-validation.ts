@@ -10,7 +10,7 @@ export class UserValidation {
     })
 
     static readonly LOGIN: ZodType = z.object({
-        username: z.string().min(3),
+        username: z.string().min(1, { message: "Username field is required" }),
         password: z.string().min(8)
     });
     

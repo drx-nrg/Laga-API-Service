@@ -23,7 +23,7 @@ export interface UpdateUserRequest {
     firstname: string,
     lastname: string,
     username: string,
-    bio: string
+    bio?: string
 }
 
 export type UserJWTPayload = {
